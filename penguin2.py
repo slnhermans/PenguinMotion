@@ -82,11 +82,11 @@ class Penguin(object):
 				r = self.get_distance(penguin_list[i])
 				r_mag = np.linalg.norm(r)
 
-				if (penguin_list[i] != self) && (penguin_list[i].boundary == True):
+				if (penguin_list[i] != self) and (penguin_list[i].boundary == True):
 
 					distance_sum += self.get_distance(penguin_list[i])
 
-				if (penguin_list[i] != self) && (r_mag < critical_radius)):
+				if (penguin_list[i] != self) and (r_mag < critical_radius)):
 
 					T_alignment += T_align * (self.alignment - penguin_list[i].alignment)
 
