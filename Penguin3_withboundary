@@ -1,0 +1,71 @@
+import numpy as np
+import scipy as sp
+
+class Penguin(object):
+
+	def __init__(self, radius, position, alignment, boundary):
+		"""
+		Arguments:
+			radius		:=	float representing penguin radius
+			position	:=	numpy array representing penguin position (x, y, z)
+			alignment	:=	numpy array representing alignment unit vector
+			boundary	:=	boolean value, True if boundary penguin, False if bulk penguin
+		"""
+
+		self.radius = radius
+		self.position = position
+		self.alignment = alignment
+		self.boundary = boundary
+
+	def get_distance(self, penguin2):
+
+		return self.position - penguin2.position
+
+	def net_force(self, F_self, F_in, k, penguin_list, a):
+		"""
+		Arguments:
+			F_self			:=	multiplicative strength factor of penguin self-propulsion
+			F_in			:=	multiplicative strength factor of the penguin boundary force
+			k				:=	spring constant relating to the repulsive force of overlapping penguins
+			penguin_list	:=	python list containing all penguins in the system
+			a 				:=	average radius of all penguins in the system
+		"""
+
+		critical_radius = 1.30 * a
+
+		F_selfPropulsion = F_self * self.alignment
+
+		F_repulsion = 0 
+
+		if (self.boundary == True):
+
+			F_boundary = F_in * self.alignment
+
+		else:
+
+			F_boundary = 0
+
+		for i in range(len(penguin_list)):
+                        above_plane = []
+			if (penguin_list[i] != self):
+
+				r = self.get_distance(penguin_list[i])
+				r_mag = np.linalg.norm(r)
+
+				if (r < critical_radius):
+
+					F_repulsion += -k * r
+					#alignment [a b c], position [x_0, y_0, z_0], neighbour at [x, y, z]
+                                        #Plane defined by: a(x-x_0)+b(y-y_0)+c(z-z_0)=0
+					plane = self.alignment[0]*(penguin_list[i].position[0] - self.position[0]) + self.alignment[1]*(penguin_list[i].position[1] - self.position[1]) + self.alignment[2]*(penguin_list[i].position[2] - self.position[2])
+                                        if plane >= 0:
+                                            above_plane.append(0)
+                                        else:
+                                            above_plane.append(1)
+                        if (all(i == 0 for i in above_plane)) or (all (i == 1 for i in above_plane)):
+                                self.boundary = True
+                        else:
+                        	self.boundary = False
+		return F_selfPropulsion + F_boundary + F_repulsion
+
+	def net_torque(self, T_in, T_noise, T_align):
