@@ -2,16 +2,32 @@ import numpy as np
 import scipy as sp
 import random
 
+global a, dev_a, N_xy, N_z, critical_radius, neighbour_radius
+
 # Computational Parameters
 a = 1.           # Average size of the penguins
 dev_a = a/10.    # Deviation of the average size
 
-N_xy = 2        # Number of penguins in the x and  y direction
-N_z = 3         # Number of penguins in the z direction
+N_xy = 10        # Number of penguins in the x and  y direction
+N_z = 12        # Number of penguins in the z direction
 
 dev_i = 0.01
 dev_j = 0.01
 dev_or = 0.25*np.pi
+
+critical_radius = a
+neighbour_radius = 1.3 * a
+
+t_final = 3
+
+# Physical Constants
+F_self = 0.1
+F_in = 0.3
+k = 1.
+
+T_in = 3.
+T_n = 0.03
+T_align = 0.3
 
 class Penguin(object):
 
@@ -79,16 +95,15 @@ class Penguin(object):
                                             above_plane.append(0)
                                         else:
                                             above_plane.append(1)
-                #print(above_plane)
-                nrofn.append(len(above_plane))
+
                 neigh_nr = len(above_plane)
                 #if (all(j == 0 for j in above_plane)) or (all (j == 1 for j in above_plane))
                 if neigh_nr < 6:
                     self.boundary = True
-                    F_boundary = F_in * r/neigh_nr
+                    F_boundary = F_in * -r #/neigh_nr
                 else:
                     self.boundary = False
-                return F_boundary
+                return F_boundary + F_repulsion + F_selfPropulsion 
         def net_torque(self, T_in, T_n, T_align, penguin_list, a):
                 """
                 Arguments:
@@ -100,63 +115,91 @@ class Penguin(object):
                 """
 
                 critical_radius = a
-                T_alignment = np.zeros(3)
+                
 
-                if (self.boundary == True):
+                # Torque Alignment
 
-                        distance_sum = np.zeros(3)
-
-                        for i in range(len(penguin_list)):
+                align = np.zeros(3)
+                
+                for i in range(len(penguin_list)):
+                        if (penguin_list[i] != self):
 
                                 r = self.get_distance(penguin_list[i])
                                 r_mag = np.linalg.norm(r)
 
-                                if (penguin_list[i] != self) and (penguin_list[i].boundary == True):
+                                if r_mag < neighbour_radius:
+                                        align += penguin.alignment
 
-                                        distance_sum += np.linalg.norm(self.get_distance(penguin_list[i]))
+                T_alignment = T_align * align 
 
-                                if (penguin_list[i] != self) and (r_mag < critical_radius):
+                if (self.boundary == True):
 
-                                        T_alignment += T_align * (self.alignment - penguin_list[i].alignment)
+##                        distance_sum = np.zeros(3)
+##
+##                        for i in range(len(penguin_list)):
+##
+##                                r = self.get_distance(penguin_list[i])
+##                                r_mag = np.linalg.norm(r)
+##
+##                                if (penguin_list[i] != self) and (penguin_list[i].boundary == True):
+##
+##                                        distance_sum += np.linalg.norm(self.get_distance(penguin_list[i]))
+##
+##                                if (penguin_list[i] != self) and (r_mag < critical_radius):
+##
+##                                        T_alignment += T_align * (self.alignment - penguin_list[i].alignment)
+##
+##                        exterior_bisector = distance_sum / np.linalg.norm(distance_sum)
+##
+##                        delta_theta = self.alignment - exterior_bisector
 
-                        exterior_bisector = distance_sum / np.linalg.norm(distance_sum)
-
-                        delta_theta = self.alignment - exterior_bisector
-
-                        T_boundary = T_in * delta_theta
+                        T_boundary = T_in #* delta_theta
 
                 else:
 
                         T_boundary = 0
 
-                eta = random.uniform(-1.0,1.0)
+                eta = np.random.uniform(-1.0,1.0,3)
 
                 T_noise = eta * T_n
 
                 return T_boundary + T_noise + T_alignment
-                
+
 ##############################################################################
-########################INITIALIZING##########################################
+########################PROPEGATION###########################################
 ##############################################################################
 
+##def propegation(Penguin_list):
+##        for penguin in Penguin_list:
+##                penguin.position += penguin.net_force(F_self,F_in,k,Penguin_list,a)
+##                penguin.alignment += penguin.net_torque(T_in,T_n,T_align,Penguin_list,a)
+
+
+                
+                
+##############################################################################
+########################MAIN RUN##############################################
+##############################################################################
+
+# Initializing
 # Placing all the penguins on a cuboid grid, with small deviations on the grid points
 Penguin_list = []
-nrofn = []
+
 for i in range(N_xy):
     for j in range(N_xy):
         for k in range(N_z):
             Penguin_list.append(Penguin(np.random.normal(a,dev_a),
                     np.array([np.random.normal(i,dev_i),np.random.normal(j,dev_j),k]),
                     np.array([np.random.normal(0,1),np.random.normal(0,1),1]), False))
-cnt = 0
-##for penguin in Penguin_list:
-##    penguin.net_force(1,1,1,Penguin_list,1)
-##    if penguin.boundary:
-##        cnt += 1
 
 
-for penguin in Penguin_list:
-	print(penguin.net_force(1,1,1,Penguin_list,a))
+# Main RUN
+for l in range(t_final):
+       for penguin in Penguin_list:
+               penguin.position += penguin.net_force(F_self,F_in,k,Penguin_list,a)
+               penguin.alignment += penguin.net_torque(T_in,T_n,T_align,Penguin_list,a) 
 	
-##print(cnt)
-##print(nrofn)
+##for penguin in Penguin_list:
+##        print('Position', penguin.position)
+##        print('Alignment', penguin.alignment)
+##        print('Boundary',penguin.boundary)
